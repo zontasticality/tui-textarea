@@ -23,12 +23,12 @@ macro_rules! error {
     }};
 }
 
-struct SearchBox<'a> {
-    textarea: TextArea<'a>,
+struct SearchBox {
+    textarea: TextArea,
     open: bool,
 }
 
-impl<'a> Default for SearchBox<'a> {
+impl Default for SearchBox {
     fn default() -> Self {
         let mut textarea = TextArea::default();
         textarea.set_block(Block::default().borders(Borders::ALL).title("Search"));
@@ -91,7 +91,7 @@ impl<'a> SearchBox<'a> {
 }
 
 struct Buffer<'a> {
-    textarea: TextArea<'a>,
+    textarea: TextArea,
     path: PathBuf,
     modified: bool,
 }

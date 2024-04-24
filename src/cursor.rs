@@ -324,12 +324,15 @@ impl CursorMove {
 
 #[cfg(test)]
 mod tests {
+    use ratatui::widgets::StatefulWidget;
+
+    use crate::TextAreaWidget;
+
     // Seaparate tests for tui-rs support
     #[test]
     fn in_viewport() {
         use crate::ratatui::buffer::Buffer;
         use crate::ratatui::layout::Rect;
-        use crate::ratatui::widgets::Widget;
         use crate::{CursorMove, TextArea};
 
         let mut textarea: TextArea = (0..20).map(|i| i.to_string()).collect();
@@ -340,7 +343,7 @@ mod tests {
             height: 8,
         };
         let mut b = Buffer::empty(r);
-        textarea.widget().render(r, &mut b);
+        StatefulWidget::render(TextAreaWidget::new(), r, &mut b, &mut textarea);
 
         textarea.move_cursor(CursorMove::Bottom);
         assert_eq!(textarea.cursor(), (19, 0));

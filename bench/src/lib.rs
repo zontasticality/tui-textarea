@@ -4,9 +4,10 @@
 use ratatui::backend::{Backend, WindowSize};
 use ratatui::buffer::Cell;
 use ratatui::layout::{Rect, Size};
+use ratatui::widgets::StatefulWidget;
 use ratatui::Terminal;
 use std::io;
-use tui_textarea::TextArea;
+use tui_textarea::{TextArea, TextAreaWidget};
 
 pub const LOREM: &[&str] = &[
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do",
@@ -110,13 +111,13 @@ pub fn dummy_terminal() -> Terminal<DummyBackend> {
 }
 
 pub trait TerminalExt {
-    fn draw_textarea(&mut self, textarea: &TextArea<'_>);
+    fn draw_textarea(&mut self, textarea: &mut TextArea);
 }
 
 impl TerminalExt for Terminal<DummyBackend> {
     #[inline]
-    fn draw_textarea(&mut self, textarea: &TextArea<'_>) {
-        self.draw(|f| f.render_widget(textarea.widget(), f.size()))
-            .unwrap();
+    fn draw_textarea(&mut self, textarea: &mut TextArea) {
+        self.draw(|f|f.render_stateful_widget(TextAreaWidget::new(), f.size(), textarea)).unwrap();
+        
     }
 }

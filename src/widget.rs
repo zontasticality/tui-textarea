@@ -1,3 +1,5 @@
+use ratatui::widgets::{Block, StatefulWidget};
+
 use crate::ratatui::buffer::Buffer;
 use crate::ratatui::layout::Rect;
 use crate::ratatui::text::Text;
@@ -76,29 +78,35 @@ impl Viewport {
     }
 }
 
-pub struct Renderer<'a>(&'a TextArea<'a>);
+#[derive(Default)]
+pub struct TextAreaWidget<'a> {
+    block: Option<Block<'a>>
+}
 
-impl<'a> Renderer<'a> {
-    pub fn new(textarea: &'a TextArea<'a>) -> Self {
-        Self(textarea)
+impl<'a> TextAreaWidget<'a> {
+    pub fn new() -> Self {
+        Self::default()
     }
-
-    #[inline]
-    fn text(&self, top_row: usize, height: usize) -> Text<'a> {
-        let lines_len = self.0.lines().len();
-        let lnum_len = num_digits(lines_len);
-        let bottom_row = cmp::min(top_row + height, lines_len);
-        let mut lines = Vec::with_capacity(bottom_row - top_row);
-        for (i, line) in self.0.lines()[top_row..bottom_row].iter().enumerate() {
-            lines.push(self.0.line_spans(line.as_str(), top_row + i, lnum_len));
-        }
-        Text::from(lines)
+    /// Set the block of textarea. By default, no block is set.
+    /// ```
+    /// use tui_textarea::TextArea;
+    /// use ratatui::widgets::{Block, Borders};
+    ///
+    /// let mut textarea = TextArea::default();
+    /// let block = Block::default().borders(Borders::ALL).title("Block Title");
+    /// textarea.set_block(block);
+    /// assert!(textarea.block().is_some());
+    /// ```
+    pub fn block<'b: 'a>(mut self, block: Block<'b>) -> Self {
+        self.block = Some(block);
+        self
     }
 }
 
-impl<'a> Widget for Renderer<'a> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let Rect { width, height, .. } = if let Some(b) = self.0.block() {
+impl<'a> StatefulWidget for TextAreaWidget<'a> {
+    type State = TextArea;
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let Rect { width, height, .. } = if let Some(b) = &self.block {
             b.inner(area)
         } else {
             area
@@ -114,16 +122,26 @@ impl<'a> Widget for Renderer<'a> {
             }
         }
 
-        let cursor = self.0.cursor();
-        let (top_row, top_col) = self.0.viewport.scroll_top();
+        let cursor = state.cursor();
+        let (top_row, top_col) = state.viewport.scroll_top();
         let top_row = next_scroll_top(top_row, cursor.0 as u16, height);
         let top_col = next_scroll_top(top_col, cursor.1 as u16, width);
 
-        let (text, style) = if !self.0.placeholder.is_empty() && self.0.is_empty() {
-            let text = Text::from(self.0.placeholder.as_str());
-            (text, self.0.placeholder_style)
+        let mut lines = Vec::new();
+        let (text, style) = if !state.placeholder.is_empty() && state.is_empty() {
+            let text = Text::from(state.placeholder.as_str());
+            (text, state.placeholder_style)
         } else {
-            (self.text(top_row as usize, height as usize), self.0.style())
+            let top_row = top_row as usize;
+            let height = height as usize;
+            let lines_len = state.lines().len();
+            let lnum_len = num_digits(lines_len);
+            let bottom_row = cmp::min(top_row + height, lines_len);
+            for (i, line) in state.lines()[top_row..bottom_row].iter().enumerate() {
+                lines.push(state.line_spans(line.as_str(), top_row + i, lnum_len));
+            }
+            
+            (Text::from(lines), state.style())
         };
 
         // To get fine control over the text color and the surrrounding block they have to be rendered separately
@@ -131,8 +149,8 @@ impl<'a> Widget for Renderer<'a> {
         let mut text_area = area;
         let mut inner = Paragraph::new(text)
             .style(style)
-            .alignment(self.0.alignment());
-        if let Some(b) = self.0.block() {
+            .alignment(state.alignment());
+        if let Some(b) = self.block {
             text_area = b.inner(area);
             b.clone().render(area, buf)
         }
@@ -141,7 +159,7 @@ impl<'a> Widget for Renderer<'a> {
         }
 
         // Store scroll top position for rendering on the next tick
-        self.0.viewport.store(top_row, top_col, width, height);
+        state.viewport.store(top_row, top_col, width, height);
 
         inner.render(text_area, buf);
     }

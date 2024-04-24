@@ -183,6 +183,10 @@ impl From<(i16, i16)> for Scrolling {
 
 #[cfg(test)]
 mod tests {
+    use ratatui::widgets::StatefulWidget;
+
+    use crate::TextAreaWidget;
+
     use super::*;
 
     // Seaparate tests for tui-rs support
@@ -190,7 +194,6 @@ mod tests {
     fn delta() {
         use crate::ratatui::buffer::Buffer;
         use crate::ratatui::layout::Rect;
-        use crate::ratatui::widgets::Widget;
         use crate::TextArea;
 
         let mut textarea: TextArea = (0..20).map(|i| i.to_string()).collect();
@@ -201,7 +204,7 @@ mod tests {
             height: 8,
         };
         let mut b = Buffer::empty(r);
-        textarea.widget().render(r, &mut b);
+        StatefulWidget::render(TextAreaWidget::new(), r, &mut b, &mut textarea);
 
         textarea.scroll(Scrolling::Delta { rows: 2, cols: 0 });
         assert_eq!(textarea.cursor(), (2, 0));

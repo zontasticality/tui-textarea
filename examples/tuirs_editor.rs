@@ -26,7 +26,7 @@ macro_rules! error {
 }
 
 struct SearchBox<'a> {
-    textarea: TextArea<'a>,
+    textarea: TextArea,
     open: bool,
 }
 
@@ -93,7 +93,7 @@ impl<'a> SearchBox<'a> {
 }
 
 struct Buffer<'a> {
-    textarea: TextArea<'a>,
+    textarea: TextArea,
     path: PathBuf,
     modified: bool,
 }

@@ -4,12 +4,11 @@ use crate::history::{Edit, EditKind, History};
 use crate::input::{Input, Key};
 use crate::ratatui::layout::Alignment;
 use crate::ratatui::style::{Color, Modifier, Style};
-use crate::ratatui::widgets::{Block, Widget};
 use crate::scroll::Scrolling;
 #[cfg(feature = "search")]
 use crate::search::Search;
 use crate::util::{spaces, Pos};
-use crate::widget::{Renderer, Viewport};
+use crate::widget::Viewport;
 use crate::word::{find_word_end_forward, find_word_start_backward};
 #[cfg(feature = "ratatui")]
 use ratatui::text::Line;
@@ -75,9 +74,8 @@ impl ToString for YankText {
 /// println!("Lines: {:?}", textarea.lines());
 /// ```
 #[derive(Clone, Debug)]
-pub struct TextArea<'a> {
+pub struct TextArea {
     lines: Vec<String>,
-    block: Option<Block<'a>>,
     style: Style,
     cursor: (usize, usize), // 0-base
     tab_len: u8,
@@ -118,7 +116,7 @@ pub struct TextArea<'a> {
 /// let textarea = TextArea::from(slice.iter().copied());
 /// assert_eq!(textarea.lines(), ["hello", "world"]);
 /// ```
-impl<'a, I> From<I> for TextArea<'a>
+impl<I> From<I> for TextArea
 where
     I: IntoIterator,
     I::Item: Into<String>,
@@ -137,7 +135,7 @@ where
 /// use std::path::Path;
 /// use tui_textarea::TextArea;
 ///
-/// fn read_from_file<'a>(path: impl AsRef<Path>) -> io::Result<TextArea<'a>> {
+/// fn read_from_file(path: impl AsRef<Path>) -> io::Result<TextArea> {
 ///     let file = fs::File::open(path)?;
 ///     io::BufReader::new(file).lines().collect()
 /// }
@@ -145,7 +143,7 @@ where
 /// let textarea = read_from_file("README.md").unwrap();
 /// assert!(!textarea.is_empty());
 /// ```
-impl<'a, S: Into<String>> FromIterator<S> for TextArea<'a> {
+impl<S: Into<String>> FromIterator<S> for TextArea {
     fn from_iter<I: IntoIterator<Item = S>>(iter: I) -> Self {
         iter.into()
     }
@@ -159,13 +157,13 @@ impl<'a, S: Into<String>> FromIterator<S> for TextArea<'a> {
 /// assert_eq!(textarea.lines(), [""]);
 /// assert!(textarea.is_empty());
 /// ```
-impl<'a> Default for TextArea<'a> {
+impl Default for TextArea {
     fn default() -> Self {
         Self::new(vec![String::new()])
     }
 }
 
-impl<'a> TextArea<'a> {
+impl TextArea {
     /// Create [`TextArea`] instance with given lines. If you have value other than `Vec<String>`, [`TextArea::from`]
     /// may be more useful.
     /// ```
@@ -182,7 +180,6 @@ impl<'a> TextArea<'a> {
 
         Self {
             lines,
-            block: None,
             style: Style::default(),
             cursor: (0, 0),
             tab_len: 4,
@@ -1586,7 +1583,7 @@ impl<'a> TextArea<'a> {
         hl.into_spans()
     }
 
-    /// Build a ratatui (or tui-rs) widget to render the current state of the textarea. The widget instance returned
+    /* /// Build a ratatui (or tui-rs) widget to render the current state of the textarea. The widget instance returned
     /// from this method can be rendered with [`ratatui::terminal::Frame::render_widget`].
     /// ```no_run
     /// use ratatui::backend::CrosstermBackend;
@@ -1612,9 +1609,9 @@ impl<'a> TextArea<'a> {
     ///     // ...
     /// }
     /// ```
-    pub fn widget(&'a self) -> impl Widget + 'a {
+    pub fn widget(&self) -> impl Widget + {
         Renderer::new(self)
-    }
+    } */
 
     /// Set the style of textarea. By default, textarea is not styled.
     /// ```
@@ -1633,40 +1630,6 @@ impl<'a> TextArea<'a> {
     /// Get the current style of textarea.
     pub fn style(&self) -> Style {
         self.style
-    }
-
-    /// Set the block of textarea. By default, no block is set.
-    /// ```
-    /// use tui_textarea::TextArea;
-    /// use ratatui::widgets::{Block, Borders};
-    ///
-    /// let mut textarea = TextArea::default();
-    /// let block = Block::default().borders(Borders::ALL).title("Block Title");
-    /// textarea.set_block(block);
-    /// assert!(textarea.block().is_some());
-    /// ```
-    pub fn set_block(&mut self, block: Block<'a>) {
-        self.block = Some(block);
-    }
-
-    /// Remove the block of textarea which was set by [`TextArea::set_block`].
-    /// ```
-    /// use tui_textarea::TextArea;
-    /// use ratatui::widgets::{Block, Borders};
-    ///
-    /// let mut textarea = TextArea::default();
-    /// let block = Block::default().borders(Borders::ALL).title("Block Title");
-    /// textarea.set_block(block);
-    /// textarea.remove_block();
-    /// assert!(textarea.block().is_none());
-    /// ```
-    pub fn remove_block(&mut self) {
-        self.block = None;
-    }
-
-    /// Get the block of textarea if exists.
-    pub fn block<'s>(&'s self) -> Option<&'s Block<'a>> {
-        self.block.as_ref()
     }
 
     /// Set the length of tab character. Setting 0 disables tab inputs.
@@ -1965,7 +1928,7 @@ impl<'a> TextArea<'a> {
     /// textarea.insert_char('b');
     /// assert_eq!(textarea.lines(), ["a", "b"]);
     /// ```
-    pub fn lines(&'a self) -> &'a [String] {
+    pub fn lines(&self) -> &[String] {
         &self.lines
     }
 
@@ -2322,6 +2285,10 @@ impl<'a> TextArea<'a> {
 
 #[cfg(test)]
 mod tests {
+    use ratatui::widgets::StatefulWidget;
+
+    use crate::TextAreaWidget;
+
     use super::*;
 
     // Seaparate tests for tui-rs support
@@ -2329,7 +2296,7 @@ mod tests {
     fn scroll() {
         use crate::ratatui::buffer::Buffer;
         use crate::ratatui::layout::Rect;
-        use crate::ratatui::widgets::Widget;
+        // use crate::ratatui::widgets::Widget;
 
         let mut textarea: TextArea = (0..20).map(|i| i.to_string()).collect();
         let r = Rect {
@@ -2339,7 +2306,7 @@ mod tests {
             height: 8,
         };
         let mut b = Buffer::empty(r);
-        textarea.widget().render(r, &mut b);
+        StatefulWidget::render(TextAreaWidget::new(), r, &mut b, &mut textarea);
 
         textarea.scroll((15, 0));
         assert_eq!(textarea.cursor(), (15, 0));
